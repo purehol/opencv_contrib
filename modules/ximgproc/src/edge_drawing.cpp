@@ -393,6 +393,8 @@ void EdgeDrawingImpl::detectEdges(InputArray src)
     lines.clear();
     segmentPoints.clear();
     segmentPoints.push_back(vector<Point>()); // create empty vector of points for segments
+    if (smoothImage.data == srcImage.data) // with Sigma < 1.0 the previous call left smoothImage sharing the previous input
+        smoothImage.release();
     srcImage = src.getMat();
     srcImg = srcImage.data;
     height = srcImage.rows;
@@ -427,7 +429,10 @@ void EdgeDrawingImpl::detectEdges(InputArray src)
             memset(dH, 0, sizeof(double) * ED_MAX_GRAD_VALUE);
             memset(edgeImg, 0, width * height); // clear edge image
 
+            if (smoothImage.data == srcImage.data) // Sigma < 1.0: smoothImage shares the caller's image, blur into own memory instead
+                smoothImage.release();
             GaussianBlur(srcImage, smoothImage, Size(), 0.4);
+            smoothImg = smoothImage.data;
 
             for (int i = 1; i < height - 1; i++) {
                 for (int j = 1; j < width - 1; j++) {
@@ -2715,7 +2720,10 @@ void EdgeDrawingImpl::detectEllipses(OutputArray ellipses)
     //----------------------------- VALIDATE CIRCLES --------------------------
     noCircles2 = 0;
     circles2 = new Circle[maxNoOfCircles];
+    if (smoothImage.data == srcImage.data) // Sigma < 1.0: smoothImage shares the caller's image, blur into own memory instead
+        smoothImage.release();
     GaussianBlur(srcImage, smoothImage, Size(), 0.50); // calculate kernel from sigma;
+    smoothImg = smoothImage.data;
 
     ValidateCircles(params.NFAValidation);
 
